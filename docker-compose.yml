@@ -62,7 +62,7 @@ x-wonton:
     en: "Chat with characters played by AI or run text adventures: pick a ready-made character or write your own. For character cards and long-running stories."
   icon: icon.png
   notices: [NOTICE]
-  screenshots: [screenshots/chat.png, screenshots/characters.png]
+  screenshots: [screenshots/characters.png]
   author: { name: geraldpeng6 }
   homepage: https://github.com/SillyTavern/SillyTavern
   # 上游应用的许可证；插件包自己的许可证写在仓库的 LICENSE 里。
