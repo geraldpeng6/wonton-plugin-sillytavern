@@ -1,43 +1,46 @@
-# 云吞插件模板
+# AI 角色扮演（SillyTavern）
 
-开发流程见[插件开发指南](https://github.com/wontonapp/wonton-docs/blob/main/develop.md)。
+[English](#english)
 
-这是一个能安装的示例插件 `app.example.hello`：使用 nginx 官方镜像显示问候页，经网关的 `sso: proxy` 注入用户名，页面显示“你好，<用户名>”。示例没有应用账号、持久化数据或 MCP 工具。
+和 AI 扮演的角色聊天、玩文字冒险：自带角色可以直接聊，也能自己捏角色、写世界观。模型默认走云吞的模型网关，
+不用填 key；多用户由应用自己管，家里每个人有自己的聊天记录。
 
-## 示例文件
+![icon](icon.png)
 
-| 路径 | 内容 |
-| --- | --- |
-| `docker-compose.yml` | 示例清单、nginx 服务和三个 `configs` |
-| `web/default.conf.template` | nginx 配置，启用 SSI 回显用户名并提供健康检查入口；只放行来自核心地址（`${WONTON_CORE_ADDRESS}`）的请求，其余来源 403 |
-| `web/index.html` | 问候页 |
-| `web/tokens.css` | 页面主题变量的后备值 |
-| `tabs/` | 示例主页的应用页面图标 |
-| `screenshots/home.png` | 商店详情页的示例截图 |
-| `scripts/smoke-probes.sh` | 检查真实页面和网关注入身份的插件探针 |
+## 这个插件做了什么
 
-从模板创建自己的插件后，替换示例清单、网页和素材；具体步骤见[写插件](https://github.com/wontonapp/wonton-docs/blob/main/develop.md#写插件)。
+- 用 SillyTavern 的上游官方镜像（`ghcr.io/sillytavern/sillytavern:1.19.0`，按摘要固定），不改上游。
+- 一次性服务 `seed-model` 把模型网关的连接（地址、模型名、凭据）写进默认用户（`default-user`）的
+  `settings.json` 和 `secrets.json`，只在用户还没配置过模型接口时写入；重装插件会换网关凭据，
+  脚本按自己写的值（`data/.wonton-model.json` 记录）刷新，用户改过的连接一律不动。细节见 `seed-model.js`。
+- 多用户：没有用户时应用自动建 `default-user`（管理员、无密码，唯一用户且无密码时打开即自动登录）。
+  白名单模式关掉（请求都来自核心网关，插件拿不到要信任的网关地址），加上上游给反向代理部署留的
+  `securityOverride` 开关，首次启动的安全检查才放行无密码的管理员账号。
+- 数据都落在插件数据目录：`config/`（config.yaml）、`data/`（用户数据）、`backups/`、`extensions/`（第三方扩展），
+  升级重建容器不丢。
 
-## 对着别的栈跑探针
+## 权限
 
-`probes`、`api`、`session` 按 `.wonton/.env` 的 `WONTON_BASE_DOMAIN` 拼核心地址，`up` 起的栈自己写这个键。插件装进别人的栈、或者对着已有环境排查时，把那套栈的基础域名写进 `.wonton/.env`，不要只按实例名猜地址：实例名只是资源名前缀，网关按 Host 认域名，拼错了会回“没有安装”。
-
-```bash
-WONTON_BASE_DOMAIN=wonton.localhost
-```
-
-## 核心镜像
-
-检查和冒烟默认用套件里的核心镜像（`ghcr.io/wontonapp/wonton-core:main`）；要固定别的核心镜像，在仓库 Settings → Variables 设 `WONTON_CORE_IMAGE`，手动触发“检查”时填的 `core-image` 输入优先。
-
-## 更新开发套件
-
-```bash
-scripts/dev.sh kit-update
-```
-
-在从模板新建的插件仓库中更新套件；本仓库是套件源头，执行时只提示并退出。版本、可选引用和自定义脚本约定见[开发指南](https://github.com/wontonapp/wonton-docs/blob/main/develop.md#更新开发套件)。
+- `models`：对话模型经云吞的模型网关。
+- `network.egress`：角色卡、扩展、分词器和语音模型从网上下载；接别的模型服务商也要出网。
 
 ## 图标
 
-`icon.svg` 是本仓库原创线条图标，按本仓库 MIT 许可证分发，见 [NOTICE](NOTICE)。
+`icon.png` 取自 SillyTavern 的官方图标，来源、许可和商标说明见 [NOTICE](NOTICE)。
+
+## 许可证
+
+- 插件包（清单、脚本、说明）：MIT，见 [LICENSE](LICENSE)。
+- 上游应用 SillyTavern：AGPL-3.0（https://github.com/SillyTavern/SillyTavern）。
+
+# English
+
+Chat with characters played by AI or run text adventures, powered by the upstream official image of
+SillyTavern 1.19.0. The model goes through Wonton's model gateway by default; a one-shot service
+writes the connection into the default user's settings on first install and refreshes it when the plugin
+is reinstalled (the gateway credential rotates), never touching connections the user configured.
+
+Multi-user is handled by the app itself: the first account (`default-user`, admin) is created without a
+password and auto-signed-in while it is the only user; the plugin runs with upstream's
+`securityOverride` escape hatch for reverse-proxy deployments and whitelist mode off, because the trusted
+gateway address is not available to plugins. See `docker-compose.yml` and `seed-model.js` for details.
